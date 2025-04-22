@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fogo Slide Puzzle</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            color: white;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+            background: #1a1a1a; /* New dark background color */
+            overflow: hidden;
+        }
+
+        /* Animated gradient background */
+        #background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background: linear-gradient(45deg, #1a1a1a, #c72c41, #e7bb4f, #74b3ce); /* New gradient color scheme */
+            background-size: 400%;
+            animation: gradient 8s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Fogo name in the background */
+        #fogo-background {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-50%);
+            font-size: 80vmin;
+            font-weight: bold;
+            color: rgba(255, 69, 0, 0.2);
+            letter-spacing: 10px;
+            z-index: -1;
+            opacity: 0.3;
+            animation: fadeInOut 8s ease-in-out infinite;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+
+        #controls {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        select, button {
+            padding: 10px 15px;
+            font-size: 1rem;
+            border-radius: 6px;
+            border: none;
+            background: #222;
+            color: #ffcc00;
+            cursor: pointer;
+        }
+
+        #audio-toggle {
+            font-size: 1.2rem;
+            padding: 8px 12px;
+        }
+
+        /* Timer and moves info bar */
+        #info-bar {
+            width: 90vmin;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 1px 1px 3px black;
+            z-index: 2;
+        }
+
+        #timer, #moves {
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 10px 15px;
+            border-radius: 8px;
+            min-width: 120px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+        }
+
+        #puzzle-container {
+            margin-top: 20px;
+            display: grid;
+            gap: 2px;
+            border: 2px solid white;
+            background-color: rgba(0, 0, 0, 0.4);
+            position: relative;
+            z-index: 10;
+        }
+
+        .tile {
+            border: 1px solid #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .tile.fallback {
+            background-image: none;
+            background-color: #ffcc00;
+        }
+
+        .empty {
+            background-image: none !important;
+            background-color: transparent;
+            border: none;
+            cursor: default;
+        }
+
+        #footer {
+            margin-top: 50px;
+            font-size: 2rem; /* Increased font size */
+            color: #ffcc00;
+            text-shadow: 1px 1px 4px black;
+            z-index: 10;
+            animation: glow 1.5s ease-in-out infinite alternate;
+            position: fixed; /* To keep it at the bottom */
+            bottom: 10px; /* Adjust as needed for spacing */
+            right: 10px; /* Adjust as needed for spacing from the right */
+            text-align: right; /* Align text to the right */
+        }
+
+        /* Hover effect for footer text */
+        #footer:hover {
+            text-shadow: 0 0 15px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 215, 0, 1);
+            transform: scale(1.1);
+            cursor: pointer;
+        }
+
+        audio {
+            display: none;
+        }
+
+        /* Flame effect */
+        #flame-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="background"></div>
+    <div id="fogo-background">Fogo</div>
+    <canvas id="flame-canvas"></canvas>
+
+    <h1>🔥 Fogo Slide Puzzle</h1>
+
+    <div id="controls">
+        <label for="sizeSelect">Difficulty:</label>
+        <select id="sizeSelect">
+            <option value="3">3x3</option>
+            <option value="4">4x4</option>
+            <option value="5" selected>5x5</option>
+        </select>
+        <button onclick="resetPuzzle()">🔁 Shuffle Again</button>
+        <button id="audio-toggle" onclick="toggleAudio()">▶</button>
+    </div>
+
+    <div id="info-bar">
+        <div id="timer">⏱ Time: 0s</div>
+        <div id="moves">💡 Moves: 0</div>
+    </div>
+
+    <div id="puzzle-container"></div>
+
+    <div id="footer">Designed by Asrith</div>
+
+    <audio id="background-audio" loop>
+        <source src="audio.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <audio id="move-sound">
+        <source src="move-sound.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        let size = 5;
+        let moves = 0;
+        const container = document.getElementById('puzzle-container');
+        const sizeSelect = document.getElementById('sizeSelect');
+        const audio = document.getElementById('background-audio');
+        const audioToggle = document.getElementById('audio-toggle');
+        let board = [];
+        let startTime, timerInterval;
+        let useFallback = false;
+
+        // Check if image is available
+        const img = new Image();
+        img.src = 'img.webp';
+        img.onload = () => {
+            console.log('Image loaded successfully');
+            resetPuzzle();
+        };
+        img.onerror = () => {
+            console.warn('Image failed to load, using fallback mode');
+            useFallback = true;
+            resetPuzzle();
+        };
+
+        sizeSelect.addEventListener('change', () => {
+            size = parseInt(sizeSelect.value);
+            console.log(`Changing puzzle size to ${size}x${size}`);
+            resetPuzzle();
+        });
+
+        function updateTileAppearance(tile) {
+            const value = parseInt(tile.dataset.value);
+            tile.classList.remove('empty', 'fallback');
+            tile.textContent = '';
+
+            if (value === 0) {
+                tile.classList.add('empty');
+                tile.style.backgroundImage = 'none';
+            } else {
+                if (useFallback) {
+                    tile.classList.add('fallback');
+                    tile.textContent = value;
+                } else {
+                    const x = (value - 1) % size;
+                    const y = Math.floor((value - 1) / size);
+                    tile.style.backgroundImage = `url('img.webp')`;
+                    tile.style.backgroundSize = `${size * 100}% ${size * 100}%`;
+                    tile.style.backgroundPosition = `${(x / (size - 1)) * 100}% ${(y / (size - 1)) * 100}%`;
+                }
+            }
+        }
+
+        function resetPuzzle() {
+            try {
+                console.log('Resetting puzzle...');
+                clearInterval(timerInterval);
+                document.getElementById('timer').textContent = '⏱ Time: 0s';
+                document.getElementById('moves').textContent = '💡 Moves: 0';
+                moves = 0;
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+
+                container.innerHTML = '';
+                board = [];
+                container.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+                container.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+
+                // Adjust puzzle container size to fit the grid
+                const puzzleSize = Math.min(window.innerWidth, window.innerHeight - 150) * 0.8;
+                container.style.width = `${puzzleSize}px`;
+                container.style.height = `${puzzleSize}px`;
+
+                let numbers = [...Array(size * size).keys()];
+                shuffle(numbers);
+
+                for (let i = 0; i < size * size; i++) {
+                    const tile = document.createElement('div');
+                    tile.classList.add('tile');
+                    tile.dataset.index = i;
+                    tile.dataset.value = numbers[i];
+                    updateTileAppearance(tile);
+                    tile.addEventListener('click', () => tryMove(i));
+                    container.appendChild(tile);
+                    board.push(tile);
+                }
+                console.log('Puzzle grid created with', board.length, 'tiles');
+            } catch (error) {
+                console.error('Error in resetPuzzle:', error);
+            }
+        }
+
+        function updateTimer() {
+            const seconds = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('timer').textContent = `⏱ Time: ${seconds}s`;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function tryMove(index) {
+            try {
+                const emptyIndex = board.findIndex(tile => tile.dataset.value === "0");
+                const validMoves = getAdjacentIndices(emptyIndex);
+
+                if (validMoves.includes(index)) {
+                    swapTiles(index, emptyIndex);
+                    playMoveSound();
+                    moves++;
+                    document.getElementById('moves').textContent = `💡 Moves: ${moves}`;
+                    if (checkSolved()) {
+                        clearInterval(timerInterval);
+                        setTimeout(() => alert("🎉 Puzzle Solved!"), 300);
+                    }
+                }
+            } catch (error) {
+                console.error('Error in tryMove:', error);
+            }
+        }
+
+        function playMoveSound() {
+            const moveSound = document.getElementById('move-sound');
+            moveSound.currentTime = 0;
+            moveSound.play().catch(() => console.warn('Move sound failed to play'));
+        }
+
+        function getAdjacentIndices(index) {
+            const adjacent = [];
+            const row = Math.floor(index / size);
+            const col = index % size;
+
+            if (row > 0) adjacent.push(index - size);
+            if (row < size - 1) adjacent.push(index + size);
+            if (col > 0) adjacent.push(index - 1);
+            if (col < size - 1) adjacent.push(index + 1);
+
+            return adjacent;
+        }
+
+        function swapTiles(i, j) {
+            try {
+                const temp = board[i].dataset.value;
+                board[i].dataset.value = board[j].dataset.value;
+                board[j].dataset.value = temp;
+
+                updateTileAppearance(board[i]);
+                updateTileAppearance(board[j]);
+            } catch (error) {
+                console.error('Error in swapTiles:', error);
+            }
+        }
+
+        function checkSolved() {
+            return board.every((tile, index) => parseInt(tile.dataset.value) === index);
+        }
+
+        function toggleAudio() {
+            if (audio.paused) {
+                audio.play();
+                audioToggle.textContent = '❚❚';
+            } else {
+                audio.pause();
+                audioToggle.textContent = '▶';
+            }
+        }
+
+        // Flame effect logic
+        (function createFlameEffect() {
+            const canvas = document.getElementById('flame-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            let flames = [];
+
+            class Flame {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = canvas.height;
+                    this.speed = Math.random() * 5 + 1;
+                    this.size = Math.random() * 10 + 5;
+                    this.color = `rgba(${Math.random() * 255}, ${Math.random() * 255}, 0, 0.7)`;
+                }
+
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                    this.y -= this.speed;
+
+                    if (this.y < -10) {
+                        flames.splice(flames.indexOf(this), 1);
+                    }
+                }
+            }
+
+            function createFlame() {
+                flames.push(new Flame());
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                flames.forEach(flame => flame.draw());
+                if (Math.random() < 0.1) createFlame();
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+        })();
+    </script>
+</body>
+</html>
