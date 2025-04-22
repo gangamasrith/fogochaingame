@@ -19,7 +19,7 @@ A fun and interactive slide puzzle game built using HTML, CSS, and JavaScript.
 
 ## 🌐 Live Demo
 
-[Click here to play](https://agangamasrith.github.io/puzzlegame/)
+[Click here to play](https://gangamasrith.github.io/puzzlegame/)
 
 ## 👨‍💻 Author
 
